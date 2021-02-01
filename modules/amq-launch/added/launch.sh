@@ -592,7 +592,7 @@ function configure() {
     PRINT_ARGS="${PRINT_ARGS/--ssl-trust-password $AMQ_TRUSTSTORE_PASSWORD/--ssl-trust-password XXXXX}"
 
     if [ "$AMQ_CONSOLE_ARGS" ]; then
-      AMQ_ARGS="$AMQ_ARGS $AMQ_CONSOLE_ARGS"
+      AMQ_ARGS="$AMQ_ARGS $AMQ_CONSOLE_ARGS at ${instanceDir}"
       keypat='(.*)(--ssl-key-password).([[:alnum:]]*)(.*)'
       [[ "$AMQ_CONSOLE_ARGS"  =~ $keypat ]]
       CONSOLE_ARGS_NO_KEYPASS="${BASH_REMATCH[1]} ${BASH_REMATCH[2]} XXXXX ${BASH_REMATCH[4]}"
@@ -608,7 +608,7 @@ function configure() {
 
     echo "Checking yacfg file under dir: $TUNE_PATH"
 
-    if [ -f "${TUNE_PATH}/broker.xml" ]; then
+    if [[ -f "${TUNE_PATH}/broker.xml" ]]; then
         echo "yacfg broker.xml exists."
         updateAddressSettings "${TUNE_PATH}/broker.xml" "${instanceDir}/etc/broker.xml"
     fi
@@ -648,14 +648,49 @@ function removeWhiteSpace() {
 
 function runServer() {
 
-  echo "Configuring Broker"
+  echo "Running server env: home: ${HOME} AMQ_HOME ${AMQ_HOME} CONFIG_BROKER ${CONFIG_BROKER} RUN_BROKER ${RUN_BROKER}"
   instanceDir="${HOME}/${AMQ_NAME}"
 
   configure $instanceDir
 
-  if [ "$1" != "nostart" ]; then
-    echo "Running Broker"
-    exec ${instanceDir}/bin/artemis run
+  if [ -z ${CONFIG_BROKER+x} ]; then
+    echo "NO CONFIG_BROKER defined"
+    CONFIG_BROKER=true
+  fi
+  if [ -z ${RUN_BROKER+x} ]; then
+    echo "NO RUN_BROKER defined"
+    RUN_BROKER=true
+  fi
+
+  if [ "${CONFIG_BROKER}" = "true" ]; then
+    echo "Configuring Broker at ${CONFIG_INSTANCE_DIR}"
+    echo "config Using instanceDir: $instanceDir"
+    configure $instanceDir
+
+  if [ "$1" != "nostart" ]; then	    if [ -z "${CONFIG_INSTANCE_DIR+x}" ]; then
+    echo "Running Broker"	      echo "No CONFIG_INSTANCE_DIR defined"
+    exec ${instanceDir}/bin/artemis run	    else
+      echo "user defined CONFIG_INSTANCE_DIR, copying"
+      cp -r $instanceDir "${CONFIG_INSTANCE_DIR}"
+      ls ${CONFIG_INSTANCE_DIR}
+    fi
+  fi
+
+  if [ "${RUN_BROKER}" == "true" ]; then
+    if [ "${CONFIG_BROKER}" != "true" ]; then
+      if [ -z "${CONFIG_INSTANCE_DIR+x}" ]; then
+        echo "No custom configuration supplied"
+      else
+        echo "Using custom configuration. Copy from ${CONFIG_INSTANCE_DIR} to ${instanceDir}"
+        rm -rf ${instanceDir}
+        ls ${CONFIG_INSTANCE_DIR}/*
+        cp -r ${CONFIG_INSTANCE_DIR}/* ${HOME}
+      fi
+    fi
+    if [ "$1" != "nostart" ]; then
+      echo "Running Broker in ${instanceDir}"
+      exec ${instanceDir}/bin/artemis run
+    fi
   fi
 }
 
