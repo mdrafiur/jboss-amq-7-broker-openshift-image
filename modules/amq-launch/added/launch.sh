@@ -651,8 +651,6 @@ function runServer() {
   echo "Running server env: home: ${HOME} AMQ_HOME ${AMQ_HOME} CONFIG_BROKER ${CONFIG_BROKER} RUN_BROKER ${RUN_BROKER}"
   instanceDir="${HOME}/${AMQ_NAME}"
 
-  configure $instanceDir
-
   if [ -z ${CONFIG_BROKER+x} ]; then
     echo "NO CONFIG_BROKER defined"
     CONFIG_BROKER=true
@@ -667,9 +665,9 @@ function runServer() {
     echo "config Using instanceDir: $instanceDir"
     configure $instanceDir
 
-  if [ "$1" != "nostart" ]; then	    if [ -z "${CONFIG_INSTANCE_DIR+x}" ]; then
-    echo "Running Broker"	      echo "No CONFIG_INSTANCE_DIR defined"
-    exec ${instanceDir}/bin/artemis run	    else
+    if [ -z "${CONFIG_INSTANCE_DIR+x}" ]; then
+      echo "No CONFIG_INSTANCE_DIR defined"
+    else
       echo "user defined CONFIG_INSTANCE_DIR, copying"
       cp -r $instanceDir "${CONFIG_INSTANCE_DIR}"
       ls ${CONFIG_INSTANCE_DIR}
